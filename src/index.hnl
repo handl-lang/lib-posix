@@ -193,12 +193,12 @@ export extname: String ~> String
 -- Clocks
 --
 -- POSIX clock reads (clock_gettime/gettimeofday family) ARE kernel-reaching,
--- hence `~[1]~>`. These deliberately overlap the `lib-time` contract
--- (`NowMs`/`InstantNs`/`ElapsedNs` + the `Clock` grade): `lib-time` is the
--- portable, grade-aware port; `posix` declares the syscall-level readings a
--- `posix-c`-style backend provides. A `time-c` backend may satisfy `lib-time`
--- by delegating to these arrows; the two contracts are compatible by
--- construction (same shapes, different names).
+-- hence `~[1]~>`. This is the single clock contract for the platform: the
+-- former `lib-time` port (`NowMs`/`InstantNs`/`ElapsedNs` types + the
+-- `Clock` grade) folded in here — `posix-c` implements these arrows with a
+-- direct `clock_gettime` `ffi.call` and `posix-stub` with deterministic
+-- zeros. `elapsed_ns` is a pure saturated diff (`~>`), matching the old
+-- `ElapsedNs` shape; the read it wraps is effectful in the backends.
 -- ---------------------------------------------------------------------------
 
 --- Wall-clock milliseconds since the Unix epoch (CLOCK_REALTIME).

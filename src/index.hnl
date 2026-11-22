@@ -151,7 +151,7 @@ export read_file: String ~[1]~> Bytes
 export write_file: (String, Value) ~[1]~> Int
 
 --- access(path, F_OK) as a Bool.
-export exists: String ~[1]~> Bool
+export path_exists: String ~[1]~> Bool
 
 --- opendir/readdir/closedir collection with "." and ".." filtered.
 export list_dir: String ~[1]~> (List(String))

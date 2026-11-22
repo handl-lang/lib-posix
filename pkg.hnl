@@ -1,0 +1,10 @@
+-- lib-posix: modules this package provides (entry defaults to
+-- src/index.hnl; N modules resolve to src/<name>/index.hnl).
+{
+  modules: ["posix"],
+  name: "posix",
+  description: "POSIX.1 contract — fd, filesystem, env, path and clock port signatures.",
+  license: "MIT",
+  keywords: ["posix", "fs", "fd", "contract", "stdlib"],
+  homepage: "https://github.com/handl-lang/lib-posix",
+}

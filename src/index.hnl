@@ -1,0 +1,217 @@
+--- posix -- POSIX.1-2017 contract: file-descriptor, filesystem, process
+--- environment, path and clock operations.
+---
+--- This is the port side of the port/impl split: every arrow below is a
+--- *signature + doc*, no implementation. Backends (`posix-c` over libc via
+--- `ffi.call`, `posix-stub` for tests) export arrows of these types; the
+--- existing `lib-fs` module is the reference implementation of the fs half.
+---
+--- Effect discipline: `~[1]~>` marks every arrow that reaches the kernel
+--- (syscall or libc wrapper). A failed call raises `err` naming the op and
+--- the `strerror` text (the `lib-fs` convention: `"fs: <op>: <strerror>"`,
+--- here `"posix: <op>: <strerror>"`), so success paths return plain values
+--- and `-1`/NULL/errno never escape into handl code.
+---
+--- Constants are not exported as values; backends fix the linux/generic
+--- bitmasks. The ones the signatures refer to:
+---
+---   open flags    O_RDONLY=0  O_WRONLY=1  O_RDWR=2  O_CREAT=64
+---                  O_EXCL=128  O_TRUNC=512  O_APPEND=1024
+---   access modes   F_OK=0  R_OK=4  W_OK=2  X_OK=1   (bitmask; F_OK=existence)
+---   mkdir/open mode 0755 = 493, 0644 = 420 (decimal; callers pass Int)
+---   lseek whence   SEEK_SET=0  SEEK_CUR=1  SEEK_END=2
+---
+--- `Dir` and `Stat` are opaque/symbolic record types (like `Init`/`Response`
+--- in `lib-fetch`): `Dir` is an open-directory handle valid until `closedir`;
+--- `Stat` is the stat(2) record `{ size, mode, dev, ino, nlink, uid, gid,
+--- rdev, blksize, blocks, is_dir, is_file, is_symlink, atime_*, mtime_*,
+--- ctime_* }` with `*_sec`/`*_nsec` pairs and `*_ms` millisecond stamps,
+--- exactly the `lib-fs` shape.
+
+from "type" import { Nat, Unit }
+
+-- ---------------------------------------------------------------------------
+-- File descriptors
+-- ---------------------------------------------------------------------------
+
+--- open(2): open `path` with flag/mode bitmask, returning a new fd.
+--- @param {path} - NUL-terminated-able path String
+--- @param {flags} - O_* bitmask (O_RDONLY default when 0)
+--- @param {mode} - permission bits, used only with O_CREAT
+--- @returns {Int - a non-negative file descriptor}
+export open: (String, Int, Int) ~[1]~> Int
+
+--- close(2): release `fd`. Closing an already-closed or invalid fd raises.
+export close: Int ~[1]~> Unit
+
+--- read(2): up to `count` bytes from `fd` at its current offset.
+--- @returns {Bytes - short at EOF; empty Bytes at end-of-file}
+export read: (Int, Int) ~[1]~> Bytes
+
+--- write(2): write `data` at the current offset.
+--- @returns {Int - bytes actually written (may be short; callers loop)}
+export write: (Int, Bytes) ~[1]~> Int
+
+--- pread(2): read `count` bytes at absolute `offset` without moving the
+--- file offset. Same short-read/EOF contract as `read`.
+export pread: (Int, Int, Int) ~[1]~> Bytes
+
+--- pwrite(2): write `data` at absolute `offset` without moving the file
+--- offset. @returns {Int - bytes actually written}
+export pwrite: (Int, Bytes, Int) ~[1]~> Int
+
+--- lseek(2): reposition `fd`.
+--- @param {whence} - SEEK_SET/CUR/END bitmask value
+--- @returns {Int - the new absolute offset}
+export lseek: (Int, Int, Int) ~[1]~> Int
+
+--- fsync(2): flush `fd`'s data and metadata to stable storage.
+export fsync: Int ~[1]~> Unit
+
+--- fdatasync(2): like `fsync` but may skip metadata that cannot affect
+--- subsequent reads (cheaper; POSIX-optional — backends without it raise a
+--- named `err`, never silently degrade to `fsync` unless documented).
+export fdatasync: Int ~[1]~> Unit
+
+-- ---------------------------------------------------------------------------
+-- Path-addressed filesystem
+-- ---------------------------------------------------------------------------
+
+--- unlink(2): remove the directory entry `path` (file or symlink).
+export unlink: String ~[1]~> Unit
+
+--- rmdir(2): remove the empty directory `path`.
+export rmdir: String ~[1]~> Unit
+
+--- rename(2): move `src` to `dst`, replacing `dst` when permitted.
+export rename: (String, String) ~[1]~> Unit
+
+--- mkdir(2): create one directory level.
+--- @param {mode} - permission bits (0755 = 493 is the common choice)
+export mkdir: (String, Int) ~[1]~> Unit
+
+--- access(2): test reachability of `path`.
+--- @param {mode} - F_OK/R_OK/W_OK/X_OK bitmask (0 = existence only)
+--- @returns {Bool - true iff every requested permission holds}
+export access: (String, Int) ~[1]~> Bool
+
+--- stat(2): follow symlinks; raise on failure (missing path is an error,
+--- not a null — use the `is_*`/predicate conveniences for the soft read).
+export stat: String ~[1]~> Stat
+
+--- lstat(2): like `stat` but report the symlink itself
+--- (`is_symlink` true) instead of following it.
+export lstat: String ~[1]~> Stat
+
+--- fstat(2): `stat` record for an open `fd`.
+export fstat: Int ~[1]~> Stat
+
+--- opendir(3): open directory `path` for iteration.
+--- @returns {Dir - opaque handle; `readdir` until it yields null, then `closedir`}
+export opendir: String ~[1]~> Dir
+
+--- readdir(3): next directory entry name, or null at end-of-directory.
+--- POSIX includes "." and ".."; the `list_dir` convenience filters them.
+export readdir: Dir ~[1]~> Value
+
+--- closedir(3): release a `Dir` handle from `opendir`.
+export closedir: Dir ~[1]~> Unit
+
+--- getcwd(3): absolute path of the process working directory.
+export getcwd: () ~[1]~> String
+
+--- chdir(2): change the process working directory.
+export chdir: String ~[1]~> Unit
+
+-- ---------------------------------------------------------------------------
+-- Process environment
+-- ---------------------------------------------------------------------------
+
+--- getenv(3): value of environment variable `name`.
+--- @returns {Value - the String value, or null when unset or empty-ambiguous
+---   per libc (unset is the only guaranteed null case)}
+export getenv: String ~[1]~> Value
+
+--- env_has: true iff `getenv name` is non-null. Convenience over `getenv`;
+--- POSIX itself has no separate predicate.
+export env_has: String ~[1]~> Bool
+
+-- ---------------------------------------------------------------------------
+-- Derived conveniences (still kernel-reaching, so still `~[1]~>`)
+--
+-- These are the `lib-fs` export surface restated as contract arrows: thin
+-- compositions of the ops above that every backend should also provide.
+-- ---------------------------------------------------------------------------
+
+--- Read a whole file as Bytes (open + read loop + close).
+export read_file: String ~[1]~> Bytes
+
+--- Write `data` (String or Bytes) to `path`, truncating/creating 0644.
+--- @returns {Int - byte count written}
+export write_file: (String, Value) ~[1]~> Int
+
+--- access(path, F_OK) as a Bool.
+export exists: String ~[1]~> Bool
+
+--- opendir/readdir/closedir collection with "." and ".." filtered.
+export list_dir: String ~[1]~> (List(String))
+
+--- stat-following predicates; a missing or wrong-kind path is false, not err.
+export is_dir: String ~[1]~> Bool
+export is_file: String ~[1]~> Bool
+
+--- Handl-idiomatic spelling of `unlink` (lib-fs `remove`).
+export remove: String ~[1]~> Unit
+
+-- ---------------------------------------------------------------------------
+-- Pure path conveniences (NOT syscalls — `~>`, documented as pure)
+--
+-- These mirror `lib-os-c`'s `path.hnl`: string operations only, safe to
+-- run in pure handl, no kernel reach. Included here so `posix` consumers get
+-- the whole path story from one contract; a backend may implement them in
+-- handl directly.
+-- ---------------------------------------------------------------------------
+
+--- Join path components with "/".
+export join: (List(String)) ~> String
+
+--- Resolve path components to one path. Currently pure normalization
+--- (join); a backend MAY implement realpath(3) semantics, which would make
+--- it effectful — contract keeps it pure until that lands (lib-os-c TODO).
+export resolve: (List(String)) ~> String
+
+--- Last path component (file name portion).
+export basename: String ~> String
+
+--- Directory component of a path ("." when there is none).
+export dirname: String ~> String
+
+--- File extension including the leading dot, or "".
+export extname: String ~> String
+
+-- ---------------------------------------------------------------------------
+-- Clocks
+--
+-- POSIX clock reads (clock_gettime/gettimeofday family) ARE kernel-reaching,
+-- hence `~[1]~>`. These deliberately overlap the `lib-time` contract
+-- (`NowMs`/`InstantNs`/`ElapsedNs` + the `Clock` grade): `lib-time` is the
+-- portable, grade-aware port; `posix` declares the syscall-level readings a
+-- `posix-c`-style backend provides. A `time-c` backend may satisfy `lib-time`
+-- by delegating to these arrows; the two contracts are compatible by
+-- construction (same shapes, different names).
+-- ---------------------------------------------------------------------------
+
+--- Wall-clock milliseconds since the Unix epoch (CLOCK_REALTIME).
+--- @returns {Nat - ms since 1970-01-01 00:00:00 UTC}
+export now_ms: () ~[1]~> Nat
+
+--- Nanoseconds on a monotonic clock (CLOCK_MONOTONIC).
+--- @returns {Nat - ns from a backend-chosen, unspecified epoch}
+export instant_ns: () ~[1]~> Nat
+
+--- Nanoseconds elapsed since a previous `instant_ns` reading.
+--- Pure diff saturated at 0 — same shape as lib-time's `ElapsedNs`.
+export elapsed_ns: Nat ~> Nat
+
+--- Wall-clock seconds since the Unix epoch, fractional (lib-os-c `epoch`).
+export epoch: () ~[1]~> Number

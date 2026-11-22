@@ -166,7 +166,7 @@ export remove: String ~[1]~> Unit
 -- ---------------------------------------------------------------------------
 -- Pure path conveniences (NOT syscalls — `~>`, documented as pure)
 --
--- These mirror `lib-os-c`'s `path.hnl`: string operations only, safe to
+-- These mirror `lib-posix-c`'s `path.hnl`: string operations only, safe to
 -- run in pure handl, no kernel reach. Included here so `posix` consumers get
 -- the whole path story from one contract; a backend may implement them in
 -- handl directly.
@@ -177,7 +177,7 @@ export join: (List(String)) ~> String
 
 --- Resolve path components to one path. Currently pure normalization
 --- (join); a backend MAY implement realpath(3) semantics, which would make
---- it effectful — contract keeps it pure until that lands (lib-os-c TODO).
+--- it effectful — contract keeps it pure until that lands (lib-posix-c TODO).
 export resolve: (List(String)) ~> String
 
 --- Last path component (file name portion).
@@ -213,5 +213,5 @@ export instant_ns: () ~[1]~> Nat
 --- Pure diff saturated at 0 — same shape as lib-time's `ElapsedNs`.
 export elapsed_ns: Nat ~> Nat
 
---- Wall-clock seconds since the Unix epoch, fractional (lib-os-c `epoch`).
+--- Wall-clock seconds since the Unix epoch, fractional (lib-posix-c `epoch`).
 export epoch: () ~[1]~> Number

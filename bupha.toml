@@ -6,7 +6,7 @@
 
 [[repos]]
 name = "handl-lang/lib-posix"
-dir = "/home/luis/GitHub/handl-lang/lib-posix"
+dir = "~//GitHub/handl-lang/lib-posix"
 branch = "refs/heads/main"
   [repos.runner]
   kind = "script"

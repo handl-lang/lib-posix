@@ -39,89 +39,89 @@ from "type" import { Nat, Unit }
 --- @param {flags} - O_* bitmask (O_RDONLY default when 0)
 --- @param {mode} - permission bits, used only with O_CREAT
 --- @returns {Int - a non-negative file descriptor}
-export open: (String, Int, Int) ~[1]~> Int
+export open: (String, Int, Int) ~>[1] Int
 
 --- close(2): release `fd`. Closing an already-closed or invalid fd raises.
-export close: Int ~[1]~> Unit
+export close: Int ~>[1] Unit
 
 --- read(2): up to `count` bytes from `fd` at its current offset.
 --- @returns {Bytes - short at EOF; empty Bytes at end-of-file}
-export read: (Int, Int) ~[1]~> Bytes
+export read: (Int, Int) ~>[1] Bytes
 
 --- write(2): write `data` at the current offset.
 --- @returns {Int - bytes actually written (may be short; callers loop)}
-export write: (Int, Bytes) ~[1]~> Int
+export write: (Int, Bytes) ~>[1] Int
 
 --- pread(2): read `count` bytes at absolute `offset` without moving the
 --- file offset. Same short-read/EOF contract as `read`.
-export pread: (Int, Int, Int) ~[1]~> Bytes
+export pread: (Int, Int, Int) ~>[1] Bytes
 
 --- pwrite(2): write `data` at absolute `offset` without moving the file
 --- offset. @returns {Int - bytes actually written}
-export pwrite: (Int, Bytes, Int) ~[1]~> Int
+export pwrite: (Int, Bytes, Int) ~>[1] Int
 
 --- lseek(2): reposition `fd`.
 --- @param {whence} - SEEK_SET/CUR/END bitmask value
 --- @returns {Int - the new absolute offset}
-export lseek: (Int, Int, Int) ~[1]~> Int
+export lseek: (Int, Int, Int) ~>[1] Int
 
 --- fsync(2): flush `fd`'s data and metadata to stable storage.
-export fsync: Int ~[1]~> Unit
+export fsync: Int ~>[1] Unit
 
 --- fdatasync(2): like `fsync` but may skip metadata that cannot affect
 --- subsequent reads (cheaper; POSIX-optional — backends without it raise a
 --- named `err`, never silently degrade to `fsync` unless documented).
-export fdatasync: Int ~[1]~> Unit
+export fdatasync: Int ~>[1] Unit
 
 -- ---------------------------------------------------------------------------
 -- Path-addressed filesystem
 -- ---------------------------------------------------------------------------
 
 --- unlink(2): remove the directory entry `path` (file or symlink).
-export unlink: String ~[1]~> Unit
+export unlink: String ~>[1] Unit
 
 --- rmdir(2): remove the empty directory `path`.
-export rmdir: String ~[1]~> Unit
+export rmdir: String ~>[1] Unit
 
 --- rename(2): move `src` to `dst`, replacing `dst` when permitted.
-export rename: (String, String) ~[1]~> Unit
+export rename: (String, String) ~>[1] Unit
 
 --- mkdir(2): create one directory level.
 --- @param {mode} - permission bits (0755 = 493 is the common choice)
-export mkdir: (String, Int) ~[1]~> Unit
+export mkdir: (String, Int) ~>[1] Unit
 
 --- access(2): test reachability of `path`.
 --- @param {mode} - F_OK/R_OK/W_OK/X_OK bitmask (0 = existence only)
 --- @returns {Bool - true iff every requested permission holds}
-export access: (String, Int) ~[1]~> Bool
+export access: (String, Int) ~>[1] Bool
 
 --- stat(2): follow symlinks; raise on failure (missing path is an error,
 --- not a null — use the `is_*`/predicate conveniences for the soft read).
-export stat: String ~[1]~> Stat
+export stat: String ~>[1] Stat
 
 --- lstat(2): like `stat` but report the symlink itself
 --- (`is_symlink` true) instead of following it.
-export lstat: String ~[1]~> Stat
+export lstat: String ~>[1] Stat
 
 --- fstat(2): `stat` record for an open `fd`.
-export fstat: Int ~[1]~> Stat
+export fstat: Int ~>[1] Stat
 
 --- opendir(3): open directory `path` for iteration.
 --- @returns {Dir - opaque handle; `readdir` until it yields null, then `closedir`}
-export opendir: String ~[1]~> Dir
+export opendir: String ~>[1] Dir
 
 --- readdir(3): next directory entry name, or null at end-of-directory.
 --- POSIX includes "." and ".."; the `list_dir` convenience filters them.
-export readdir: Dir ~[1]~> Value
+export readdir: Dir ~>[1] Value
 
 --- closedir(3): release a `Dir` handle from `opendir`.
-export closedir: Dir ~[1]~> Unit
+export closedir: Dir ~>[1] Unit
 
 --- getcwd(3): absolute path of the process working directory.
-export getcwd: () ~[1]~> String
+export getcwd: () ~>[1] String
 
 --- chdir(2): change the process working directory.
-export chdir: String ~[1]~> Unit
+export chdir: String ~>[1] Unit
 
 -- ---------------------------------------------------------------------------
 -- Process environment
@@ -130,11 +130,11 @@ export chdir: String ~[1]~> Unit
 --- getenv(3): value of environment variable `name`.
 --- @returns {Value - the String value, or null when unset or empty-ambiguous
 ---   per libc (unset is the only guaranteed null case)}
-export getenv: String ~[1]~> Value
+export getenv: String ~>[1] Value
 
 --- env_has: true iff `getenv name` is non-null. Convenience over `getenv`;
 --- POSIX itself has no separate predicate.
-export env_has: String ~[1]~> Bool
+export env_has: String ~>[1] Bool
 
 -- ---------------------------------------------------------------------------
 -- Derived conveniences (still kernel-reaching, so still `~[1]~>`)
@@ -144,24 +144,24 @@ export env_has: String ~[1]~> Bool
 -- ---------------------------------------------------------------------------
 
 --- Read a whole file as Bytes (open + read loop + close).
-export read_file: String ~[1]~> Bytes
+export read_file: String ~>[1] Bytes
 
 --- Write `data` (String or Bytes) to `path`, truncating/creating 0644.
 --- @returns {Int - byte count written}
-export write_file: (String, Value) ~[1]~> Int
+export write_file: (String, Value) ~>[1] Int
 
 --- access(path, F_OK) as a Bool.
-export path_exists: String ~[1]~> Bool
+export path_exists: String ~>[1] Bool
 
 --- opendir/readdir/closedir collection with "." and ".." filtered.
-export list_dir: String ~[1]~> (List(String))
+export list_dir: String ~>[1] (List(String))
 
 --- stat-following predicates; a missing or wrong-kind path is false, not err.
-export is_dir: String ~[1]~> Bool
-export is_file: String ~[1]~> Bool
+export is_dir: String ~>[1] Bool
+export is_file: String ~>[1] Bool
 
 --- Handl-idiomatic spelling of `unlink` (lib-fs `remove`).
-export remove: String ~[1]~> Unit
+export remove: String ~>[1] Unit
 
 -- ---------------------------------------------------------------------------
 -- Pure path conveniences (NOT syscalls — `~>`, documented as pure)
@@ -203,15 +203,15 @@ export extname: String ~> String
 
 --- Wall-clock milliseconds since the Unix epoch (CLOCK_REALTIME).
 --- @returns {Nat - ms since 1970-01-01 00:00:00 UTC}
-export now_ms: () ~[1]~> Nat
+export now_ms: () ~>[1] Nat
 
 --- Nanoseconds on a monotonic clock (CLOCK_MONOTONIC).
 --- @returns {Nat - ns from a backend-chosen, unspecified epoch}
-export instant_ns: () ~[1]~> Nat
+export instant_ns: () ~>[1] Nat
 
 --- Nanoseconds elapsed since a previous `instant_ns` reading.
 --- Pure diff saturated at 0 — same shape as lib-time's `ElapsedNs`.
 export elapsed_ns: Nat ~> Nat
 
 --- Wall-clock seconds since the Unix epoch, fractional (lib-posix-c `epoch`).
-export epoch: () ~[1]~> Number
+export epoch: () ~>[1] Number

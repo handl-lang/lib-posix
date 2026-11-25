@@ -16,7 +16,7 @@ tests) export arrows of these types; `lib-fs` is the reference fs impl.
 src/                     the .hnl sources
 pkg.hnl                  package manifest
 scripts/hnl-gate.sh      the gate
-ci.sh                    bupha entry
+workflows/gate.yaml                    bupha entry (handl-gates)
 ```
 
 ## Gate

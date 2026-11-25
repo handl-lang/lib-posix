@@ -11,7 +11,7 @@ types; `lib-fs` is the reference fs impl.
 | --- | --- |
 | `src/index.hnl` | the contract — signatures + docs |
 | `pkg.hnl` | manifest — `modules: ["posix"]` |
-| `scripts/hnl-gate.sh`, `ci.sh` | the gate / bupha entry |
+| `scripts/hnl-gate.sh`, `workflows/gate.yaml` | the gate / bupha entry |
 
 ## Contract
 
